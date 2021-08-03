@@ -1,21 +1,21 @@
 <template>
   <form
-    method="POST"
-    @submit.prevent="submitForm"
+    action="https://60254fac36244d001797bfe8.mockapi.io/api/v1/send-form"
     class="d-flex align-items-center justify-content-center"
   >
     <div class="parent">
       <h5>Форма подачи заявки в отдел сервиса и качества</h5>
 
-      <form class="block">
+      <div class="block">
         <div class="select-country">
           <label class="required">Ваш филиал</label>
-          <b-select placeholder="Select a name">
+          <b-select required v-model="CityResult" :disabled="online">
+            <option disabled>Выберите один из вариантов</option>
             <option v-for="item in Cities" :key="item.id">
               {{ item.title }}
             </option>
           </b-select>
-          <b-check class="check-box">Онлайн</b-check>
+          <b-check v-model="online" class="check-box">Онлайн</b-check>
         </div>
 
         <div class="feedback flex-row-reverse align-items-start">
@@ -73,7 +73,7 @@
               </label>
             </div>
           </div>
-          <b-input placeholder="Другое" />
+          <b-input v-model="other" placeholder="Другое" />
         </div>
 
         <div class="description">
@@ -103,17 +103,27 @@
         </div>
 
         <div>
-          <b-button type="submit">Отправить</b-button>
+          <b-button
+            :disabled="
+              !this.description &&
+              (!this.checkedFields.length || !this.other) &&
+              (!this.CityResult || !this.online) &&
+              this.image
+            "
+            @click="clearForm"
+            type="submit"
+          >
+            Отправить
+          </b-button>
         </div>
-      </form>
+      </div>
     </div>
   </form>
 </template>
 
 <script lang="ts">
-import { Component, Vue } from "vue-property-decorator";
+import { Component, Vue, Watch } from "vue-property-decorator";
 import HelloWorld from "@/components/HelloWorld.vue";
-import axios from "axios";
 interface CategoryItem {
   id: number;
   title: string;
@@ -124,15 +134,24 @@ interface CategoryItem {
   },
 })
 export default class Home extends Vue {
-  Cities: Array<CategoryItem> = [];
   description: undefined;
   image: undefined;
+  Cities: Array<CategoryItem> = [];
+  checkedFields?: Array<string>;
+  other: undefined;
+  online: undefined;
+  CityResult: undefined;
+  button!: boolean;
 
   data() {
     return {
+      button: false,
       description: undefined,
       image: "",
       checkedFields: [],
+      online: false,
+      other: "",
+      CityResult: "",
     };
   }
 
@@ -151,23 +170,46 @@ export default class Home extends Vue {
     this.foo();
   }
 
-  private submitForm() {
-    let data = {
-      param1: this.param1,
-    };
+  @Watch("other")
+  private clearFields() {
+    if (this.other) {
+      this.checkedFields = [];
+    }
+  }
 
-    axios
-      .post(
-        "https://60254fac36244d001797bfe8.mockapi.io/api/v1/send-form.",
-        data
-      )
-      .then((res) => {
-        if (res.data.check == true) {
-          this.$refs.form.submit();
-        } else {
-          console.log("some error");
-        }
-      });
+  @Watch("checkedFields")
+  private clearOther() {
+    if (this.checkedFields?.length) {
+      this.other = undefined;
+    }
+  }
+
+  @Watch("online")
+  private clearCity() {
+    if (this.online) {
+      this.CityResult = undefined;
+    }
+  }
+
+  private clearForm() {
+    this.CityResult = undefined;
+    this.other = undefined;
+    this.image = undefined;
+    this.online = undefined;
+    this.checkedFields = undefined;
+    this.description = undefined;
+  }
+
+  @Watch("button")
+  private isComplete() {
+    return (
+      this.CityResult &&
+      this.online &&
+      this.other &&
+      this.checkedFields?.length &&
+      this.image &&
+      this.description
+    );
   }
 }
 </script>
@@ -191,7 +233,7 @@ export default class Home extends Vue {
   padding-top: 10px;
   margin-left: auto;
   margin-right: auto;
-  width: 48%;
+  width: 50%;
 
   h5 {
     text-align: start;
